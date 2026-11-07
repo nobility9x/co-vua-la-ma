@@ -430,8 +430,8 @@ function fitCamera(){
     need=Math.min(need,Math.tan(37*Math.PI/180));
     camera.fov=2*Math.atan(need)*180/Math.PI; camera.updateProjectionMatrix();
     var m=measureBoard();
-    if(m.mx<=.97&&m.my<=.93) break;
-    d*=Math.max(m.mx/.97,m.my/.93)*1.05; fitDist=d;
+    if(m.mx<=.985&&m.my<=.95) break;
+    d*=Math.max(m.mx/.985,m.my/.95)*1.03; fitDist=d;
   }
   camDistT=fitDist*userZoom;
 }
@@ -491,7 +491,7 @@ function initScene(){
   ground.rotation.x=-Math.PI/2; ground.position.y=-0.11; ground.receiveShadow=true; scene.add(ground);
   /* khung bàn đá + viền vàng */
   var frame=new THREE.Mesh(new THREE.BoxGeometry(9.3,.24,9.3),new THREE.MeshStandardMaterial({color:0x5a4030,roughness:.6,metalness:.1}));
-  frame.position.y=-0.02; frame.receiveShadow=true; frame.castShadow=false; scene.add(frame);
+  frame.position.y=-0.09; frame.receiveShadow=true; frame.castShadow=false; scene.add(frame);
   var trim=new THREE.Mesh(new THREE.BoxGeometry(9.44,.06,9.44),new THREE.MeshStandardMaterial({color:0xc9982f,roughness:.3,metalness:.8}));
   trim.position.y=-0.13; scene.add(trim);
   var lightMat=new THREE.MeshStandardMaterial({color:0xe9dcbc,roughness:.9,metalness:0,envMapIntensity:.3});
@@ -1412,6 +1412,8 @@ window.addEventListener('load',function(){
 });
 </script>
 </body>
+</html>
+
 </html>
 
 </html>
