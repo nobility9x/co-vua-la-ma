@@ -98,7 +98,6 @@ select{
     <button class="ibtn" id="btnNew">↻ Mới</button>
     <button class="ibtn" id="btnUndo">↩ Hoàn</button>
     <button class="ibtn" id="btnFlip" style="display:none">⇅ Lật</button>
-    <button class="ibtn on" id="btnView">◐ Nghiêng</button>
     <button class="ibtn on" id="btnSound">🔊</button>
     <div id="turnTag">🔴 Lê Dương Đỏ</div>
   </div>
@@ -136,7 +135,7 @@ select{
     <h2>CỬ ĐỘNG NGƯỜI THẬT</h2>
     <p style="margin:0">Mọi quân đều là <b>người 3D có khớp thật</b> — vai, khuỷu tay, hông, đầu gối. Khi đi, hai chân bước xen kẽ, đầu gối gập lúc nhấc chân, tay vung ngược chân, thân nhún theo nhịp bước và hơi nghiêng về trước; đi xa thì <b>chạy</b>. Đứng yên vẫn <b>thở</b>, đầu ngó quanh canh địch. Mã phi bằng <b>4 chân ngựa phi</b> xen kẽ và nhảy vọt qua đầu quân khác đúng luật Mã. Khi bị ăn, quân <b>loạng choạng rồi ngã ngửa</b> đúng hướng đòn đánh.</p>
     <h2>CÁCH CHƠI</h2>
-    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. Bàn cờ để <b>hơi nghiêng</b> cho thấy rõ người lính — nút <b>Góc</b> đổi Nghiêng / Phẳng (thẳng từ trên xuống). <b>Chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về góc + cỡ mặc định. Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
+    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. Bàn cờ <b>phẳng, nhìn thẳng từ trên xuống</b>; các quân lính <b>hơi nghiêng người về phía bạn</b> để thấy rõ mặt và thân. <b>Chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về cỡ mặc định. Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
     <h2>LỊCH SỬ NƯỚC ĐI</h2>
     <div id="movesBox" style="font-size:12.5px">Chưa có nước đi nào.</div>
   </div>
@@ -172,12 +171,12 @@ window.addEventListener('error',function(e){errBox.style.display='block';errBox.
 /* ============ DATA ============ */
 var PIECE_VI={k:'Vua',q:'Hậu',r:'Xe',b:'Tượng',n:'Mã',p:'Tốt'};
 var ROMAN={
-  k:{name:'Hoàng Đế', full:'Hoàng Đế Caesar', atk:'Hoàng Đế Trảm', H:0.94},
-  q:{name:'Nữ Tướng', full:'Nữ Tướng', atk:'Cuồng Vũ Thương', H:0.88},
-  r:{name:'Cận Vệ', full:'Cận Vệ Praetorian', atk:'Húc Khiên Phá Trận', H:0.86},
-  b:{name:'Cung Thủ', full:'Cung Thủ Sagittarius', atk:'Tên Xa', H:0.82},
-  n:{name:'Kỵ Binh', full:'Kỵ Binh Eques', atk:'Phi Mã Đâm Thương', H:0.86},
-  p:{name:'Lính Lê Dương', full:'Lính Lê Dương', atk:'Chém Gladius', H:0.74}
+  k:{name:'Hoàng Đế', full:'Hoàng Đế Caesar', atk:'Hoàng Đế Trảm', H:1.00},
+  q:{name:'Nữ Tướng', full:'Nữ Tướng', atk:'Cuồng Vũ Thương', H:0.93},
+  r:{name:'Cận Vệ', full:'Cận Vệ Praetorian', atk:'Húc Khiên Phá Trận', H:0.88},
+  b:{name:'Cung Thủ', full:'Cung Thủ Sagittarius', atk:'Tên Xa', H:0.80},
+  n:{name:'Kỵ Binh', full:'Kỵ Binh Eques', atk:'Phi Mã Đâm Thương', H:0.84},
+  p:{name:'Lính Lê Dương', full:'Lính Lê Dương', atk:'Chém Gladius', H:0.70}
 };
 var GLYPH={k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'};
 var VAL={p:100,n:320,b:330,r:500,q:900,k:20000};
@@ -424,10 +423,10 @@ function knockVictim(atkUd,vicUd,power){
 }
 var glowTex=null,glyphTexCache={},shieldTexCache={};
 var BASE_DIST=15, fitDist=BASE_DIST, userZoom=1;
-var FLAT_EL=89*Math.PI/180; /* phẳng thẳng từ trên xuống */
-var TILT_EL=63*Math.PI/180; /* hơi nghiêng cho đẹp, thấy rõ người (Cường chốt v1.0.5) */
-var viewEl=TILT_EL;
-var camAz=0,camAzT=0,camEl=TILT_EL,camElT=TILT_EL,camDist=BASE_DIST,camDistT=BASE_DIST;
+var FLAT_EL=89*Math.PI/180; /* BÀN phẳng thẳng từ trên xuống — không nghiêng bàn (Cường chốt v1.0.6) */
+var LEAN_RAD=.45; /* QUÂN hơi nghiêng người về phía người chơi cho thấy rõ mặt/thân, bàn vẫn phẳng */
+var _leanE=null; /* cấp phát sau khi THREE sẵn sàng */
+var camAz=0,camAzT=0,camEl=FLAT_EL,camElT=FLAT_EL,camDist=BASE_DIST,camDistT=BASE_DIST;
 var BOARD_PTS=[[-4.85,-4.85],[4.85,-4.85],[-4.85,4.85],[4.85,4.85],[-4.85,0],[4.85,0],[0,-4.85],[0,4.85]];
 /* Khung hình tự vừa: đo THẬT các góc bàn chiếu lên màn hình, tăng dần khoảng cách tới khi lọt hết (kể cả màn dọc) */
 function measureBoard(){
@@ -577,6 +576,7 @@ function matsFor(side,type){
     armor: std(w?0xc9ced6:0x59616d,.32,.85),
     armorDark: std(w?0x8f959f:0x3a4048,.4,.8),
     trim: std(w?0xe0aa3e:0xb9c2cc,.28,1),
+    acc: std({p:0xd8b25a,b:0x3f9e4d,r:0xe07f26,n:0x2f6fd0,q:0xd94f9e,k:0xffc93e}[type]||0xe0aa3e,.45,.25),
     cloth: std(type==='k'?(w?0x6d28a8:0x3b2358):(w?0x8e1f2f:0x2c2438),.85),
     leather: std(0x6e4a26,.8),
     wood: std(0x7a5327,.75),
@@ -605,34 +605,36 @@ function buildSpear(MT,len,flag){
   var g=new THREE.Group();
   var shaft=cyl(.013,.013,len,MT.wood,0,0,0); shaft.rotation.x=Math.PI/2; g.add(shaft);
   var tip=M(new THREE.ConeGeometry(.028,.13,8),MT.blade,0,0,len/2+.05); tip.rotation.x=Math.PI/2; g.add(tip);
-  if(flag){ var pen=box(.006,.085,.15,MT.cloth,0,-.045,len/2-.10); pen.material=MT.cloth; g.add(pen); } /* cờ hiệu nhỏ sau mũi thương */
+  if(flag){ var pen=box(.006,.085,.15,MT.acc||MT.cloth,0,-.045,len/2-.10); g.add(pen); } /* cờ hiệu màu riêng của quân sau mũi thương */
   return g;
 }
 function buildHumanoid(type,side){
   var H=ROMAN[type].H, u=H, MT=matsFor(side,type);
-  var bulk=(type==='r')?1.28:(type==='k'?1.12:1);
+  var bulk=(type==='r')?1.45:(type==='k'?1.12:1);
   var legLen=H*.44, thighLen=legLen*.52, shinLen=legLen*.48;
-  var torsoLen=H*.31, upperLen=H*.17, foreLen=H*.15, headR=H*.082;
+  var torsoLen=H*.31, upperLen=H*.17, foreLen=H*.15, headR=H*.092;
   var hipX=.088*u*bulk, shoulderX=.155*u*bulk;
   var root=new THREE.Group();
   var allMats=[]; Object.keys(MT).forEach(function(k){allMats.push(MT[k]);});
   /* đế quân */
   var plinth=cyl(.30,.34,.05,side==='w'?MT.armorDark:MT.dark,0,.025,0,24); plinth.receiveShadow=true; root.add(plinth);
-  var ring=M(new THREE.TorusGeometry(.315,.012,8,32),MT.trim,0,.05,0); ring.rotation.x=Math.PI/2; root.add(ring);
-  var glyph=new THREE.Mesh(new THREE.CircleGeometry(.16,24),new THREE.MeshBasicMaterial({map:glyphTexture(type,side),transparent:true}));
+  var ring=M(new THREE.TorusGeometry(.315,.014,8,32),MT.acc,0,.05,0); ring.rotation.x=Math.PI/2; root.add(ring);
+  var glyph=new THREE.Mesh(new THREE.CircleGeometry(.19,24),new THREE.MeshBasicMaterial({map:glyphTexture(type,side),transparent:true}));
   glyph.rotation.x=-Math.PI/2; glyph.position.set(0,.052,.0); root.add(glyph);
   var fallG=new THREE.Group(); fallG.position.y=.05; root.add(fallG);
-  var bodyG=new THREE.Group(); fallG.add(bodyG);
-  var J={MT:MT,allMats:allMats,H:H};
+  var leanG=new THREE.Group(); fallG.add(leanG); /* lớp nghiêng người về phía người chơi */
+  var bodyG=new THREE.Group(); leanG.add(bodyG);
+  var J={MT:MT,allMats:allMats,H:H,leanG:leanG};
   /* --- chân --- */
   function makeLeg(sx){
     var hip=new THREE.Group(); hip.position.set(sx*hipX,legLen,0); bodyG.add(hip);
     var thigh;
-    if(type==='q'){ thigh=box(.105*u,.52*legLen,.12*u,MT.skin,0,-thighLen/2,0); }
-    else thigh=box(.105*u*bulk,thighLen,.125*u*bulk,MT.skin,0,-thighLen/2,0);
+    if(type==='q'){ thigh=cyl(.052*u,.044*u,.52*legLen,MT.skin,0,-thighLen/2,0,10); }
+    else thigh=cyl(.056*u*bulk,.046*u*bulk,thighLen,MT.skin,0,-thighLen/2,0,10);
     hip.add(thigh);
     var knee=new THREE.Group(); knee.position.set(0,-thighLen,0); hip.add(knee);
-    knee.add(box(.09*u*bulk,shinLen,.10*u*bulk,MT.skin,0,-shinLen/2,0));
+    knee.add(cyl(.045*u*bulk,.037*u*bulk,shinLen,MT.skin,0,-shinLen/2,0,10));
+    if(type!=='q') knee.add(box(.088*u*bulk,shinLen*.82,.022,MT.armor,0,-shinLen/2,.046*u*bulk)); /* giáp ống chân */
     var sandal=box(.10*u,.03,.19*u,MT.leather,0,-shinLen+.015,.035*u); knee.add(sandal);
     var strap=box(.095*u,.05,.105*u,MT.leather,0,-shinLen+.06,0); knee.add(strap);
     return {hip:hip,knee:knee};
@@ -659,19 +661,23 @@ function buildHumanoid(type,side){
     for(var qi=0;qi<3;qi++){ var at=M(new THREE.ConeGeometry(.014,.06,6),MT.blade,(qi-1)*.035,torsoLen*.45+.20,-.175*u); torsoG.add(at); }
   }
   var belt=box(.25*u*bulk,.045*u,.165*u*bulk,MT.trim,0,.055,0); torsoG.add(belt);
-  /* choàng */
+  /* choàng: vải cong ôm lưng, tung bay từ vai */
   if(type==='k'||type==='q'||type==='n'||type==='r'){
-    var cape=box(.36*u,torsoLen+legLen*.62,.014,MT.cloth,0,torsoLen*.30,-.115*u); cape.material.side=THREE.DoubleSide;
-    cape.rotation.x=.07; torsoG.add(cape); J.cape=cape;
+    var capeG=new THREE.Group(); capeG.position.set(0,torsoLen*.94,-.095*u); torsoG.add(capeG);
+    var capeH=torsoLen+legLen*.66;
+    var capeMesh=M(new THREE.CylinderGeometry(.175*u,.31*u,capeH,12,1,true,Math.PI-.95,1.9),MT.cloth,0,-capeH/2+.05,0);
+    capeMesh.material.side=THREE.DoubleSide; capeMesh.castShadow=true; capeG.add(capeMesh);
+    capeG.rotation.x=.07; J.cape=capeG;
   }
   /* --- tay --- */
   function makeArm(sx,isWeaponSide){
     var sh=new THREE.Group(); sh.position.set(sx*shoulderX,torsoLen*.86,0); torsoG.add(sh);
     var upMat=(type==='b')?MT.skin:MT.armor;
-    sh.add(box(.085*u*bulk,upperLen,.095*u*bulk,upMat,0,-upperLen/2,0));
+    sh.add(cyl(.044*u*bulk,.037*u*bulk,upperLen,upMat,0,-upperLen/2,0,10));
     var pad=sph(.062*u*bulk,MT.armor,sx*.01,-.01,0); sh.add(pad); /* giáp vai */
     var el=new THREE.Group(); el.position.set(0,-upperLen,0); sh.add(el);
-    el.add(box(.07*u,foreLen,.075*u,MT.skin,0,-foreLen/2,0));
+    el.add(cyl(.036*u,.030*u,foreLen,MT.skin,0,-foreLen/2,0,10));
+    if(isWeaponSide&&type!=='b') el.add(cyl(.047*u,.050*u,.075*u,MT.armor,0,-foreLen*.5,0,10)); /* giáp cẳng tay cầm vũ khí */
     el.add(cyl(.042*u,.045*u,.07*u,MT.leather,0,-foreLen*.55,0,10)); /* bao tay da */
     var hand=new THREE.Group(); hand.position.set(0,-foreLen,0); el.add(hand);
     hand.add(sph(.038*u,MT.skin,0,-.02,0));
@@ -682,17 +688,19 @@ function buildHumanoid(type,side){
   /* khiên tay trái: tốt + cận vệ */
   if(type==='p'||type==='r'){
     var big=(type==='r');
-    var shW=big?.46*u:.36*u, shH=big?.62*u:.50*u;
+    var shW=big?.54*u:.38*u, shH=big?.70*u:.52*u;
     var shield=new THREE.Group();
-    var face=new THREE.Mesh(new THREE.BoxGeometry(shW,shH,.035),new THREE.MeshStandardMaterial({map:shieldTexture(side,big),roughness:.5,metalness:.25}));
-    face.castShadow=true; shield.add(face);
+    var sR=.46*u, thL=2*Math.asin(Math.min(1,(shW/2)/sR)); /* scutum CONG ôm người như thật */
+    var face=new THREE.Mesh(new THREE.CylinderGeometry(sR,sR,shH,16,1,true,-thL/2,thL),new THREE.MeshStandardMaterial({map:shieldTexture(side,big),roughness:.5,metalness:.25,side:THREE.DoubleSide}));
+    face.castShadow=true; face.position.z=-(sR-.05); shield.add(face);
+    var boss=sph(.058*u,MT.trim,0,0,.045); boss.scale.z=.55; shield.add(boss); /* núm sắt giữa khiên */
     shield.position.set(-.10*u,-.10*u,.13*u); shield.rotation.y=.12;
     armL.hand.add(shield); J.shield=shield;
   }
   /* cung tay trái cho cung thủ */
   if(type==='b'){
     var bowG=new THREE.Group();
-    var bow=M(new THREE.TorusGeometry(.30*u,.016,8,20,Math.PI*.92),MT.wood,0,0,0);
+    var bow=M(new THREE.TorusGeometry(.35*u,.017,8,20,Math.PI*.92),MT.wood,0,0,0);
     bow.rotation.z=Math.PI*.54; bowG.add(bow);
     var str=box(.008,.52*u,.008,MT.dark,0,0,-.045*u); bowG.add(str);
     bowG.position.set(0,-.03,.15*u); bowG.rotation.y=.1;
@@ -703,7 +711,7 @@ function buildHumanoid(type,side){
   var weaponR=new THREE.Group(); armR.hand.add(weaponR); J.weaponR=weaponR;
   if(type==='p'){ weaponR.add(buildSword(MT,.30*u,.020)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
   else if(type==='k'){ weaponR.add(buildSword(MT,.44*u,.030)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
-  else if(type==='q'){ weaponR.add(buildSpear(MT,1.02*u,true)); weaponR.rotation.x=-1.30; J.weaponKind='spear'; }
+  else if(type==='q'){ weaponR.add(buildSpear(MT,1.16*u,true)); weaponR.rotation.x=-1.30; J.weaponKind='spear'; }
   else if(type==='r'){ weaponR.add(buildSword(MT,.26*u,.026)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
   else if(type==='b'){ /* tay phải cầm sẵn 1 mũi tên */
     var arr=cyl(.007,.007,.32*u,MT.wood,0,0,.10); arr.rotation.x=Math.PI/2; weaponR.add(arr);
@@ -715,27 +723,38 @@ function buildHumanoid(type,side){
   var headG=new THREE.Group(); headG.position.set(0,torsoLen+.015,0); torsoG.add(headG); J.headG=headG;
   headG.add(cyl(.04*u,.045*u,.05*u,MT.skin,0,.01,0,10));
   var head=sph(headR,MT.skin,0,headR+.035,0); headG.add(head);
-  /* mắt nhìn về phía trước */
+  /* mặt: mắt + lông mày + mũi */
   var eyeMat=new THREE.MeshStandardMaterial({color:0x201812,roughness:.35});
-  [-1,1].forEach(function(sx){ var eye=M(new THREE.SphereGeometry(headR*.14,8,8),eyeMat,sx*headR*.36,headR+.045,headR*.86); eye.castShadow=false; headG.add(eye); });
+  [-1,1].forEach(function(sx){
+    var eye=M(new THREE.SphereGeometry(headR*.17,8,8),eyeMat,sx*headR*.36,headR+.045,headR*.84); eye.castShadow=false; headG.add(eye);
+    var brow=box(.055*u,.013,.012,MT.dark,sx*headR*.36,headR+.27,headR*.88); brow.rotation.z=-sx*.18; headG.add(brow);
+  });
+  var nose=M(new THREE.ConeGeometry(.016*u,.045*u,6),MT.skin,0,headR-.005,headR*.97); nose.rotation.x=Math.PI/2; headG.add(nose);
   if(type==='k'){
     var hairK=M(new THREE.SphereGeometry(headR*1.06,16,10,0,Math.PI*2,0,Math.PI*.55),MT.dark,0,headR+.045,-.014); headG.add(hairK); /* tóc vòm, hở mặt */
     var laurel=M(new THREE.TorusGeometry(headR*1.04,.013,8,20),MT.trim,0,headR+.075,.01); laurel.rotation.x=1.25; headG.add(laurel);
+    for(var ki=0;ki<3;ki++){ var kspike=M(new THREE.ConeGeometry(.013,.055*u,6),MT.acc,(ki-1)*headR*.62,headR*2.02,0); headG.add(kspike); } /* 3 gai vàng trên vành */
   } else if(type==='q'){
     var hairQ=M(new THREE.SphereGeometry(headR*1.07,16,10,0,Math.PI*2,0,Math.PI*.58),MT.dark,0,headR+.045,-.016); headG.add(hairQ); /* tóc vòm, hở mặt */
     headG.add(box(.10*u,.20*u,.05,MT.dark,0,headR-.03,-headR*1.05));
     var diadem=M(new THREE.TorusGeometry(headR*1.02,.011,8,20),MT.trim,0,headR+.08,.008); diadem.rotation.x=1.3; headG.add(diadem);
-    var gem=sph(.016*u,MT.tunic,0,headR+.10,headR*1.0); headG.add(gem); /* ngọc trên vương miện */
+    var gem=sph(.020*u,MT.acc,0,headR+.10,headR*1.0); headG.add(gem); /* ngọc hồng trên vương miện */
+    for(var qi2=0;qi2<5;qi2++){ var qa=(qi2-2)*.5, qspike=M(new THREE.ConeGeometry(.012,.075*u,6),MT.acc,Math.sin(qa)*headR*1.02,headR*2.04,Math.cos(qa)*headR*.55);
+      qspike.rotation.x=-.25; headG.add(qspike); } /* vương miện 5 gai — dấu hiệu của Hậu */
   } else if(type==='b'){
-    var hood=M(new THREE.ConeGeometry(headR*1.5,headR*2.1,12),MT.cloth,0,headR+.075,-.01); headG.add(hood);
+    var hood=M(new THREE.ConeGeometry(headR*1.45,headR*3.1,12),MT.acc,0,headR+.30,-.01); headG.add(hood); /* mũ trùm xanh lá CAO nhọn — dấu hiệu Cung thủ */
+    var hoodTip=sph(.02*u,MT.trim,0,headR+.30+headR*1.55,-.01); headG.add(hoodTip);
   } else {
     var helm=M(new THREE.SphereGeometry(headR*1.22,16,10,0,Math.PI*2,0,Math.PI*.58),MT.armor,0,headR+.045,0); headG.add(helm);
     var brim=cyl(headR*1.42,headR*1.42,.014,MT.armor,0,headR+.045,0,18); headG.add(brim);
     var cheek=box(.02,.07*u,.09*u,MT.armor,-headR*1.05,headR*.55,0); headG.add(cheek);
     var cheek2=cheek.clone(); cheek2.position.x=headR*1.05; headG.add(cheek2);
-    if(type==='r'||type==='n'){ /* mào ngang của sĩ quan / kỵ binh */
-      var crest=box(.028,.075*u,.24*u,side==='w'?MT.tunic:MT.cloth,0,headR*2.05,0); headG.add(crest);
-    } else { /* tốt: mào dọc nhỏ */
+    if(type==='r'){ /* Cận vệ: vành răng cưa như tường thành — dấu hiệu của Xe */
+      for(var mi=0;mi<6;mi++){ var ma2=mi/6*Math.PI*2, merlon=box(.052*u,.075*u,.052*u,MT.armor,Math.sin(ma2)*headR*1.02,headR*1.98,Math.cos(ma2)*headR*1.02); headG.add(merlon); }
+      var rband=M(new THREE.TorusGeometry(headR*1.16,.014,8,22),MT.acc,0,headR*1.78,0); rband.rotation.x=Math.PI/2; headG.add(rband);
+    } else if(type==='n'){ /* kỵ binh: mào dọc màu xanh dương */
+      var crest=box(.028,.075*u,.24*u,MT.acc,0,headR*2.05,0); headG.add(crest);
+    } else { /* tốt: mào ngang nhỏ màu phe */
       var crest2=box(.20*u,.06*u,.026,side==='w'?MT.tunic:MT.cloth,0,headR*2.02,0); headG.add(crest2);
     }
   }
@@ -757,6 +776,10 @@ function buildKnight(side){
   horseG.add(box(.12,.16,.05,MT.horseDark,0,.76,.47)); /* bờm */
   var ear1=M(new THREE.ConeGeometry(.028,.09,6),MT.horse,-.045,.97,.50); horseG.add(ear1);
   var ear2=ear1.clone(); ear2.position.x=.045; horseG.add(ear2);
+  var heyeMat=new THREE.MeshStandardMaterial({color:0x1a120b,roughness:.3});
+  [-1,1].forEach(function(sx){ var heye=M(new THREE.SphereGeometry(.020,8,8),heyeMat,sx*.068,.90,.63); heye.castShadow=false; horseG.add(heye); });
+  var bridle=box(.145,.028,.028,MT.dark,0,.83,.665); bridle.rotation.x=.45; horseG.add(bridle); /* dây cương qua mõm */
+  horseG.add(box(.36,.018,.42,MT.acc,0,.632,-.02)); /* viền chăn yên màu xanh dương của Kỵ binh */
   var tail=M(new THREE.ConeGeometry(.05,.34,8),MT.horseDark,0,.52,-.46); tail.rotation.x=.8; horseG.add(tail); J.hTail=tail;
   horseG.add(box(.34,.05,.40,MT.cloth,0,.665,-.02)); /* chăn yên màu phe */
   horseG.add(box(.26,.06,.30,MT.leather,0,.70,-.02)); /* yên */
@@ -891,6 +914,8 @@ var ATK_DUR={p:.82,k:.95,q:1.05,r:.85,b:1.0,n:.9};
 var ATK_HIT={p:.40,k:.42,q:.55,r:.44,b:.55,n:.48}; /* tỉ lệ thời lượng tới khoảnh khắc trúng đòn */
 function updatePose(ud,dt,t){
   var J=ud.J, bodyG=J.torsoG.parent, fallG=bodyG.parent;
+  if(J.leanG){ if(!_leanE)_leanE=new THREE.Euler(0,0,0,'YXZ');
+    _leanE.set(LEAN_RAD,-(ud.root?ud.root.rotation.y:0),0); J.leanG.quaternion.setFromEuler(_leanE); }
   if(ud.deathT>=0){
     ud.deathT+=dt/.78; var k=Math.min(1,ud.deathT);
     var fall=k<.78?Math.pow(k/.78,2)*1.52:1.52-Math.sin((k-.78)/.22*Math.PI)*.05;
@@ -1334,7 +1359,7 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('dblclick',function(){
   camAzT=(document.getElementById('selMode').value==='2p'&&turn==='b')?nearestAz(camAzT,Math.PI):nearestAz(camAzT,0);
-  camElT=viewEl; userZoom=1; camDistT=fitDist;
+  camElT=FLAT_EL; userZoom=1; camDistT=fitDist;
 });
 canvas.addEventListener('wheel',function(e){ e.preventDefault(); userZoom=Math.max(.55,Math.min(1.8,userZoom+e.deltaY*.0012)); camDistT=fitDist*userZoom; },{passive:false});
 /* ============ VÒNG LẶP CHÍNH ============ */
@@ -1380,11 +1405,7 @@ document.getElementById('btnNew').addEventListener('click',function(){ ensureAud
 document.getElementById('btnAgain').addEventListener('click',function(){ ensureAudio(); newGame(); });
 document.getElementById('btnUndo').addEventListener('click',function(){ ensureAudio(); undoPly(); });
 document.getElementById('btnFlip').addEventListener('click',function(){ camAzT=nearestAz(camAzT,camAzT+Math.PI); });
-var viewTilt=true;
-document.getElementById('btnView').addEventListener('click',function(){
-  viewTilt=!viewTilt; viewEl=viewTilt?TILT_EL:FLAT_EL; camElT=viewEl;
-  this.textContent=viewTilt?'◐ Nghiêng':'◐ Phẳng'; this.classList.toggle('on',viewTilt);
-});
+/* Không còn nút Góc: bàn luôn phẳng, quân tự nghiêng người */
 document.getElementById('btnSound').addEventListener('click',function(){
   soundOn=!soundOn; this.textContent=soundOn?'🔊':'🔇'; this.classList.toggle('on',soundOn);
   if(soundOn)ensureAudio();
