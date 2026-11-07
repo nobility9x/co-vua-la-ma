@@ -412,7 +412,7 @@ function spawnImpactLight(pos){
   effects.push({kind:'light',obj:impactLight,t:0,life:.30});
 }
 function spawnScorch(pos){
-  var s=new THREE.Mesh(new THREE.CircleGeometry(.34,20),new THREE.MeshBasicMaterial({color:0x160d06,transparent:true,opacity:.5,depthWrite:false}));
+  var s=new THREE.Mesh(new THREE.CircleGeometry(.48,20),new THREE.MeshBasicMaterial({color:0x160d06,transparent:true,opacity:.55,depthWrite:false}));
   s.rotation.x=-Math.PI/2; s.position.set(pos.x,.115,pos.z); scene.add(s);
   effects.push({kind:'scorch',obj:s,t:0,life:1.5});
 }
