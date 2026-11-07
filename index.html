@@ -98,6 +98,7 @@ select{
     <button class="ibtn" id="btnNew">↻ Mới</button>
     <button class="ibtn" id="btnUndo">↩ Hoàn</button>
     <button class="ibtn" id="btnFlip" style="display:none">⇅ Lật</button>
+    <button class="ibtn on" id="btnView">◐ Nghiêng</button>
     <button class="ibtn on" id="btnSound">🔊</button>
     <div id="turnTag">🔴 Lê Dương Đỏ</div>
   </div>
@@ -135,7 +136,7 @@ select{
     <h2>CỬ ĐỘNG NGƯỜI THẬT</h2>
     <p style="margin:0">Mọi quân đều là <b>người 3D có khớp thật</b> — vai, khuỷu tay, hông, đầu gối. Khi đi, hai chân bước xen kẽ, đầu gối gập lúc nhấc chân, tay vung ngược chân, thân nhún theo nhịp bước và hơi nghiêng về trước; đi xa thì <b>chạy</b>. Đứng yên vẫn <b>thở</b>, đầu ngó quanh canh địch. Mã phi bằng <b>4 chân ngựa phi</b> xen kẽ và nhảy vọt qua đầu quân khác đúng luật Mã. Khi bị ăn, quân <b>loạng choạng rồi ngã ngửa</b> đúng hướng đòn đánh.</p>
     <h2>CÁCH CHƠI</h2>
-    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. Bàn cờ <b>phẳng, nhìn thẳng từ trên xuống</b> — ô nào ra ô đó, bấm là trúng. <b>Chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về cỡ mặc định. Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
+    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. Bàn cờ để <b>hơi nghiêng</b> cho thấy rõ người lính — nút <b>Góc</b> đổi Nghiêng / Phẳng (thẳng từ trên xuống). <b>Chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về góc + cỡ mặc định. Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
     <h2>LỊCH SỬ NƯỚC ĐI</h2>
     <div id="movesBox" style="font-size:12.5px">Chưa có nước đi nào.</div>
   </div>
@@ -403,10 +404,30 @@ function aiPick(){
 var canvas=document.getElementById('gl');
 var renderer,scene,camera,raycaster=new THREE.Raycaster(),pointerV=new THREE.Vector2();
 var squareMeshes=[],pieceObjs=[],objGrid=[],effects=[],tweens=[];
+var impactLight=null;
+function spawnImpactLight(pos){
+  if(!impactLight)return;
+  impactLight.position.set(pos.x,1.15,pos.z); impactLight.intensity=34;
+  for(var i=effects.length-1;i>=0;i--)if(effects[i].kind==='light')effects.splice(i,1);
+  effects.push({kind:'light',obj:impactLight,t:0,life:.30});
+}
+function spawnScorch(pos){
+  var s=new THREE.Mesh(new THREE.CircleGeometry(.34,20),new THREE.MeshBasicMaterial({color:0x160d06,transparent:true,opacity:.5,depthWrite:false}));
+  s.rotation.x=-Math.PI/2; s.position.set(pos.x,.115,pos.z); scene.add(s);
+  effects.push({kind:'scorch',obj:s,t:0,life:1.5});
+}
+function knockVictim(atkUd,vicUd,power){
+  var dir=vicUd.root.position.clone().sub(atkUd.root.position); dir.y=0;
+  if(dir.lengthSq()<.001)dir.set(0,0,1); dir.normalize().multiplyScalar(power||.16);
+  var sx=vicUd.root.position.x, sz=vicUd.root.position.z;
+  addTween(.18,function(k){ vicUd.root.position.x=sx+dir.x*easeIO(k); vicUd.root.position.z=sz+dir.z*easeIO(k); });
+}
 var glowTex=null,glyphTexCache={},shieldTexCache={};
 var BASE_DIST=15, fitDist=BASE_DIST, userZoom=1;
-var FLAT_EL=89*Math.PI/180; /* góc phẳng thẳng từ trên xuống (Cường chốt: bàn phẳng, không nghiêng) */
-var camAz=0,camAzT=0,camEl=FLAT_EL,camElT=FLAT_EL,camDist=BASE_DIST,camDistT=BASE_DIST;
+var FLAT_EL=89*Math.PI/180; /* phẳng thẳng từ trên xuống */
+var TILT_EL=63*Math.PI/180; /* hơi nghiêng cho đẹp, thấy rõ người (Cường chốt v1.0.5) */
+var viewEl=TILT_EL;
+var camAz=0,camAzT=0,camEl=TILT_EL,camElT=TILT_EL,camDist=BASE_DIST,camDistT=BASE_DIST;
 var BOARD_PTS=[[-4.85,-4.85],[4.85,-4.85],[-4.85,4.85],[4.85,4.85],[-4.85,0],[4.85,0],[0,-4.85],[0,4.85]];
 /* Khung hình tự vừa: đo THẬT các góc bàn chiếu lên màn hình, tăng dần khoảng cách tới khi lọt hết (kể cả màn dọc) */
 function measureBoard(){
@@ -430,8 +451,8 @@ function fitCamera(){
     need=Math.min(need,Math.tan(37*Math.PI/180));
     camera.fov=2*Math.atan(need)*180/Math.PI; camera.updateProjectionMatrix();
     var m=measureBoard();
-    if(m.mx<=.985&&m.my<=.95) break;
-    d*=Math.max(m.mx/.985,m.my/.95)*1.03; fitDist=d;
+    if(m.mx<=.985&&m.my<=.90) break;
+    d*=Math.max(m.mx/.985,m.my/.90)*1.03; fitDist=d;
   }
   camDistT=fitDist*userZoom;
 }
@@ -455,16 +476,26 @@ function glyphTexture(t,side){
 function shieldTexture(side,big){
   var key=side+(big?'B':'S'); if(shieldTexCache[key])return shieldTexCache[key];
   var c=document.createElement('canvas');c.width=128;c.height=192;var g=c.getContext('2d');
-  g.fillStyle=side==='w'?'#a02722':'#22262c';g.fillRect(0,0,128,192);
-  g.strokeStyle=side==='w'?'#e8b64c':'#9aa7b4';g.lineWidth=7;g.strokeRect(6,6,116,180);
-  g.fillStyle=side==='w'?'#f0c75e':'#c7d0da';
-  g.beginPath();g.arc(64,96,17,0,Math.PI*2);g.fill(); /* umbo */
-  g.lineWidth=6;g.lineCap='round';
-  g.beginPath();g.moveTo(47,88);g.quadraticCurveTo(14,70,10,44);g.stroke(); /* cánh đại bàng trái */
-  g.beginPath();g.moveTo(81,88);g.quadraticCurveTo(114,70,118,44);g.stroke();
-  g.beginPath();g.moveTo(47,104);g.quadraticCurveTo(16,116,12,142);g.stroke();
-  g.beginPath();g.moveTo(81,104);g.quadraticCurveTo(112,116,116,142);g.stroke();
-  g.beginPath();g.moveTo(64,113);g.lineTo(64,168);g.stroke();
+  var base=side==='w'?'#a02722':'#22262c', acc=side==='w'?'#e8b64c':'#9aa7b4', hi=side==='w'?'#f0c75e':'#c7d0da';
+  g.fillStyle=base;g.fillRect(0,0,128,192);
+  var grd=g.createLinearGradient(0,0,128,192); grd.addColorStop(0,'rgba(255,255,255,.20)'); grd.addColorStop(.5,'rgba(255,255,255,0)'); grd.addColorStop(1,'rgba(0,0,0,.28)');
+  g.fillStyle=grd; g.fillRect(0,0,128,192);
+  g.strokeStyle=acc;g.lineWidth=7;g.strokeRect(6,6,116,180);
+  g.lineWidth=2;g.strokeRect(14,14,100,164);
+  g.fillStyle=acc; /* đinh tán viền */
+  [[14,14],[64,14],[114,14],[14,96],[114,96],[14,178],[64,178],[114,178]].forEach(function(p){ g.beginPath(); g.arc(p[0],p[1],3.4,0,Math.PI*2); g.fill(); });
+  g.fillStyle=hi;
+  g.beginPath();g.arc(64,92,17,0,Math.PI*2);g.fill(); /* umbo */
+  g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2;g.beginPath();g.arc(64,92,17,0,Math.PI*2);g.stroke();
+  g.strokeStyle=hi;g.lineWidth=6;g.lineCap='round';
+  g.beginPath();g.moveTo(47,84);g.quadraticCurveTo(14,66,10,40);g.stroke(); /* cánh đại bàng trái */
+  g.beginPath();g.moveTo(81,84);g.quadraticCurveTo(114,66,118,40);g.stroke();
+  g.beginPath();g.moveTo(47,100);g.quadraticCurveTo(16,112,12,138);g.stroke();
+  g.beginPath();g.moveTo(81,100);g.quadraticCurveTo(112,112,116,138);g.stroke();
+  g.beginPath();g.moveTo(64,109);g.lineTo(64,150);g.stroke();
+  g.fillStyle=hi; /* tia chớp dưới chân đại bàng */
+  g.beginPath();g.moveTo(52,152);g.lineTo(64,138);g.lineTo(62,150);g.lineTo(76,150);g.lineTo(62,166);g.lineTo(64,154);g.lineTo(52,152);g.fill();
+  g.font='700 17px serif';g.textAlign='center';g.fillStyle=acc;g.fillText('SPQR',64,186);
   var tx=new THREE.CanvasTexture(c); if(THREE.SRGBColorSpace)tx.colorSpace=THREE.SRGBColorSpace; shieldTexCache[key]=tx; return tx;
 }
 function initScene(){
@@ -483,6 +514,7 @@ function initScene(){
   key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0005; key.shadow.normalBias=.05; key.shadow.radius=5;
   scene.add(key);
   var rim=new THREE.DirectionalLight(0xff9a5c,.55); rim.position.set(-7,5,-8); scene.add(rim);
+  impactLight=new THREE.PointLight(0xffd9a0,0,7,2); impactLight.position.set(0,1.2,0); scene.add(impactLight);
   /* sàn đấu trường */
   var groundC=document.createElement('canvas');groundC.width=groundC.height=256;var gg=groundC.getContext('2d');
   var grd=gg.createRadialGradient(128,128,10,128,128,128);grd.addColorStop(0,'#4a2c14');grd.addColorStop(.6,'#2e1a0b');grd.addColorStop(1,'#170b05');
@@ -563,15 +595,17 @@ function sph(r,mat,x,y,z){return M(new THREE.SphereGeometry(r,18,14),mat,x,y,z);
 function buildSword(MT,long,wide){
   var g=new THREE.Group();
   var handle=cyl(.016,.016,.10,MT.leather,0,0,.02); handle.rotation.x=Math.PI/2; g.add(handle);
+  var pommel=sph(.026,MT.trim,0,0,-.045); g.add(pommel); /* núm đốc kiếm vàng */
   var guard=box(.085,.018,.03,MT.trim,0,0,.075); g.add(guard);
   var blade=box(wide||.016,.052,long,MT.blade,0,0,.075+long/2); g.add(blade);
   var tip=M(new THREE.ConeGeometry(.026,.07,4),MT.blade,0,0,.075+long+.03); tip.rotation.x=Math.PI/2; tip.scale.y=1; tip.scale.x=(wide||.016)/.052; g.add(tip);
   return g;
 }
-function buildSpear(MT,len){
+function buildSpear(MT,len,flag){
   var g=new THREE.Group();
   var shaft=cyl(.013,.013,len,MT.wood,0,0,0); shaft.rotation.x=Math.PI/2; g.add(shaft);
   var tip=M(new THREE.ConeGeometry(.028,.13,8),MT.blade,0,0,len/2+.05); tip.rotation.x=Math.PI/2; g.add(tip);
+  if(flag){ var pen=box(.006,.085,.15,MT.cloth,0,-.045,len/2-.10); pen.material=MT.cloth; g.add(pen); } /* cờ hiệu nhỏ sau mũi thương */
   return g;
 }
 function buildHumanoid(type,side){
@@ -607,13 +641,18 @@ function buildHumanoid(type,side){
   /* --- thân --- */
   var torsoG=new THREE.Group(); torsoG.position.set(0,legLen,0); bodyG.add(torsoG); J.torsoG=torsoG;
   torsoG.add(box(.24*u*bulk,.09*u,.15*u*bulk,MT.leather,0,.01,0)); /* thắt lưng/xương chậu */
-  if(type==='p'||type==='r'){ /* váy da pteruges */
+  if(type==='p'||type==='r'){ /* váy da pteruges: đế liền + dải da rời quanh hông */
     var skirt=cyl(.155*u*bulk,.20*u*bulk,.13*u,MT.leather,0,-.045,0,14); torsoG.add(skirt);
+    for(var si=0;si<7;si++){ var sa=-1.05+si*.35, strip=box(.05*u,.13*u,.016,MT.leather,Math.sin(sa)*.185*u*bulk,-.10,Math.cos(sa)*.185*u*bulk);
+      strip.rotation.y=sa; strip.rotation.x=Math.cos(sa)*.10; strip.rotation.z=-Math.sin(sa)*.10; torsoG.add(strip); }
   }
   if(type==='q'){ var skirtQ=cyl(.15*u,.27*u,.30*u,MT.cloth,0,-.10,0,14); torsoG.add(skirtQ); }
   var chest=cyl(.125*u*bulk,.105*u*bulk,torsoLen,MT.tunic,0,torsoLen/2,0,14); torsoG.add(chest);
   if(type!=='b'){ var plate=cyl(.135*u*bulk,.115*u*bulk,torsoLen*.68,MT.armor,0,torsoLen*.58,0,14); torsoG.add(plate);
     var plateTrim=M(new THREE.TorusGeometry(.128*u*bulk,.012,8,20),MT.trim,0,torsoLen*.88,0); plateTrim.rotation.x=Math.PI/2; torsoG.add(plateTrim);
+    /* giáp tấm lorica: 3 đai ngang + huy hiệu ngực cho sĩ quan */
+    [.34,.52,.70].forEach(function(f){ var band=M(new THREE.TorusGeometry(.133*u*bulk,.009,8,22),MT.armorDark,0,torsoLen*f,0); band.rotation.x=Math.PI/2; band.scale.set(1,1,.62); torsoG.add(band); });
+    if(type==='k'||type==='q'||type==='r'){ var med=cyl(.030*u,.030*u,.014,MT.trim,0,torsoLen*.60,.128*u*bulk,12); med.rotation.x=Math.PI/2; torsoG.add(med); }
   } else { /* cung thủ: áo da nhẹ + dây đeo */
     var strapB=box(.05*u,torsoLen*.8,.02,MT.leather,0,torsoLen/2,.115*u); strapB.rotation.z=.5; torsoG.add(strapB);
     var quiver=cyl(.045*u,.04*u,.34*u,MT.leather,-.02,torsoLen*.45,-.15*u,10); quiver.rotation.x=.25; quiver.rotation.z=.15; torsoG.add(quiver);
@@ -621,7 +660,7 @@ function buildHumanoid(type,side){
   }
   var belt=box(.25*u*bulk,.045*u,.165*u*bulk,MT.trim,0,.055,0); torsoG.add(belt);
   /* choàng */
-  if(type==='k'||type==='q'||type==='n'){
+  if(type==='k'||type==='q'||type==='n'||type==='r'){
     var cape=box(.36*u,torsoLen+legLen*.62,.014,MT.cloth,0,torsoLen*.30,-.115*u); cape.material.side=THREE.DoubleSide;
     cape.rotation.x=.07; torsoG.add(cape); J.cape=cape;
   }
@@ -664,7 +703,7 @@ function buildHumanoid(type,side){
   var weaponR=new THREE.Group(); armR.hand.add(weaponR); J.weaponR=weaponR;
   if(type==='p'){ weaponR.add(buildSword(MT,.30*u,.020)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
   else if(type==='k'){ weaponR.add(buildSword(MT,.44*u,.030)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
-  else if(type==='q'){ weaponR.add(buildSpear(MT,1.02*u)); weaponR.rotation.x=-1.30; J.weaponKind='spear'; }
+  else if(type==='q'){ weaponR.add(buildSpear(MT,1.02*u,true)); weaponR.rotation.x=-1.30; J.weaponKind='spear'; }
   else if(type==='r'){ weaponR.add(buildSword(MT,.26*u,.026)); weaponR.rotation.x=1.25; J.weaponKind='sword'; }
   else if(type==='b'){ /* tay phải cầm sẵn 1 mũi tên */
     var arr=cyl(.007,.007,.32*u,MT.wood,0,0,.10); arr.rotation.x=Math.PI/2; weaponR.add(arr);
@@ -676,14 +715,17 @@ function buildHumanoid(type,side){
   var headG=new THREE.Group(); headG.position.set(0,torsoLen+.015,0); torsoG.add(headG); J.headG=headG;
   headG.add(cyl(.04*u,.045*u,.05*u,MT.skin,0,.01,0,10));
   var head=sph(headR,MT.skin,0,headR+.035,0); headG.add(head);
+  /* mắt nhìn về phía trước */
+  var eyeMat=new THREE.MeshStandardMaterial({color:0x201812,roughness:.35});
+  [-1,1].forEach(function(sx){ var eye=M(new THREE.SphereGeometry(headR*.14,8,8),eyeMat,sx*headR*.36,headR+.045,headR*.86); eye.castShadow=false; headG.add(eye); });
   if(type==='k'){
-    headG.add(sph(headR*1.02,MT.dark,0,headR+.05,-.012)); /* tóc */
+    var hairK=M(new THREE.SphereGeometry(headR*1.06,16,10,0,Math.PI*2,0,Math.PI*.55),MT.dark,0,headR+.045,-.014); headG.add(hairK); /* tóc vòm, hở mặt */
     var laurel=M(new THREE.TorusGeometry(headR*1.04,.013,8,20),MT.trim,0,headR+.075,.01); laurel.rotation.x=1.25; headG.add(laurel);
   } else if(type==='q'){
-    var hair=sph(headR*1.05,MT.dark,0,headR+.045,-.02); hair.scale.set(1,1.08,1); headG.add(hair);
+    var hairQ=M(new THREE.SphereGeometry(headR*1.07,16,10,0,Math.PI*2,0,Math.PI*.58),MT.dark,0,headR+.045,-.016); headG.add(hairQ); /* tóc vòm, hở mặt */
     headG.add(box(.10*u,.20*u,.05,MT.dark,0,headR-.03,-headR*1.05));
     var diadem=M(new THREE.TorusGeometry(headR*1.02,.011,8,20),MT.trim,0,headR+.08,.008); diadem.rotation.x=1.3; headG.add(diadem);
-    head.position.z=.012; headG.children[1].position.z=.012;
+    var gem=sph(.016*u,MT.tunic,0,headR+.10,headR*1.0); headG.add(gem); /* ngọc trên vương miện */
   } else if(type==='b'){
     var hood=M(new THREE.ConeGeometry(headR*1.5,headR*2.1,12),MT.cloth,0,headR+.075,-.01); headG.add(hood);
   } else {
@@ -737,7 +779,7 @@ function buildKnight(side){
   J.shL.rotation.x=-.75; J.elL.rotation.x=-.35;
   /* thương dài tay phải */
   J.weaponR.children.slice().forEach(function(ch){J.weaponR.remove(ch);});
-  J.weaponR.add(buildSpear(J.MT,1.30*u)); J.weaponR.rotation.x=-.55; J.weaponRest=-.55; J.weaponKind='spear';
+  J.weaponR.add(buildSpear(J.MT,1.30*u,true)); J.weaponR.rotation.x=-.55; J.weaponRest=-.55; J.weaponKind='spear';
   if(J.shield){ J.shield.visible=false; }
   var smallShield=new THREE.Mesh(new THREE.CylinderGeometry(.15*u,.15*u,.03,20),new THREE.MeshStandardMaterial({map:shieldTexture(side,false),roughness:.5,metalness:.25}));
   smallShield.rotation.x=Math.PI/2; smallShield.rotation.z=Math.PI/2; smallShield.position.set(-.13*u,-.06*u,.06*u);
@@ -824,7 +866,7 @@ function updateEffects(dt){
   for(var i=effects.length-1;i>=0;i--){ var e=effects[i];
     if(e.kind==='flame'){ var s=.8+Math.sin(performance.now()*.012+e.seed*7)*.14+Math.sin(performance.now()*.031+e.seed)*.06; e.obj.scale.set(s,s*1.15,1); continue; }
     e.t+=dt; var k=e.t/e.life;
-    if(k>=1){ scene.remove(e.obj); effects.splice(i,1); continue; }
+    if(k>=1){ if(e.kind==='light'){ e.obj.intensity=0; } else scene.remove(e.obj); effects.splice(i,1); continue; }
     if(e.kind==='pts'){ var pos=e.obj.geometry.attributes.position;
       for(var j=0;j<e.vel.length;j++){ var v=e.vel[j]; v.y-=4.4*dt;
         pos.array[j*3]+=v.x*dt; pos.array[j*3+1]=Math.max(.12,pos.array[j*3+1]+v.y*dt); pos.array[j*3+2]+=v.z*dt; }
@@ -832,6 +874,8 @@ function updateEffects(dt){
     } else if(e.kind==='ring'){ var r=.2+e.maxR*easeIO(k); e.obj.scale.set(r/.2*.2*5,r/.2*.2*5,1); e.obj.scale.setScalar(1+e.maxR*easeIO(k)*3.2); e.obj.material.opacity=.95*(1-k); }
     else if(e.kind==='flash'){ e.obj.material.opacity=1-k; var sc=1+k*1.6; e.obj.scale.set(sc,sc,1); }
     else if(e.kind==='slash'){ e.obj.material.opacity=.95*(1-k); e.obj.rotation.z+=dt*7; var s2=1+k*.9; e.obj.scale.set(s2,s2,s2); }
+    else if(e.kind==='light'){ e.obj.intensity=34*(1-k)*(1-k); }
+    else if(e.kind==='scorch'){ e.obj.material.opacity=.5*(1-k); var s3=1+k*.35; e.obj.scale.set(s3,s3,1); }
   }
 }
 /* ============ TƯ THẾ / CỬ ĐỘNG ============ */
@@ -991,20 +1035,32 @@ async function performAttack(atkUd,vicUd){
     await sleep(hitAt); /* buông dây */
     attackSound('b');
     var from=atkPos.clone(); from.y=1.0;
+    for(var ti=1;ti<=4;ti++){ (function(k2){ setTimeout(function(){
+      var tp=from.clone().lerp(vicPos,k2/5); spawnParticles(tp,0xffe9a8,2,.25,.3,.06);
+    },k2*48); })(ti); } /* vệt sáng dọc đường tên */
     await projectile(from,vicPos.clone(),.24,makeArrowObj,function(){
-      vicUd.hurtT=1; spawnParticles(vicPos,0xffd97a,16,1.6,.5,.09); spawnFlash(vicPos,0xffe9a8,.7);
+      vicUd.hurtT=1; spawnParticles(vicPos,0xffd97a,22,1.9,.55,.09); spawnParticles(vicPos,0xff8a5c,10,1.2,.5,.08); spawnFlash(vicPos,0xffe9a8,.85);
+      spawnImpactLight(vicPos); spawnScorch(vicUd.root.position); knockVictim(atkUd,vicUd,.13);
     });
-    deathSound(); vicUd.deathT=0; shakeAmp=Math.max(shakeAmp,.04);
+    deathSound(); vicUd.deathT=0; shakeAmp=Math.max(shakeAmp,.05);
     await sleep(Math.max(0,dur-hitAt-240)+420);
   } else {
     setTimeout(function(){ attackSound(type); },Math.max(0,hitAt-90));
     await sleep(hitAt);
     vicUd.hurtT=1;
-    if(type==='p'){ spawnSlash(vicPos,0xffe9a8,atkUd.root.rotation.y); spawnParticles(vicPos,0xffcf6e,20,1.8,.55,.09); }
-    else if(type==='k'){ spawnSlash(vicPos,0xffd700,atkUd.root.rotation.y); spawnParticles(vicPos,0xffd700,34,2.4,.7,.11); spawnRing(vicUd.root.position,0xffd700,1.2,.6); spawnFlash(vicPos,0xffec9e,1.3); shakeAmp=Math.max(shakeAmp,.10); }
-    else if(type==='q'){ spawnSlash(vicPos,0xffd97a,atkUd.root.rotation.y+.6); spawnParticles(vicPos,0xffe9a8,26,2.1,.6,.10); }
-    else if(type==='r'){ spawnRing(vicUd.root.position,0xffb35c,1.35,.6); spawnParticles(vicPos,0xd8c3a5,26,2.0,.6,.10); spawnFlash(vicPos,0xffe9a8,.9); shakeAmp=Math.max(shakeAmp,.13); }
-    else if(type==='n'){ spawnParticles(vicPos,0xffcf6e,24,2.0,.6,.09); spawnSlash(vicPos,0xffe9a8,atkUd.root.rotation.y); }
+    /* gói hiệu ứng trúng đòn dùng chung: chớp sáng tại chỗ + đèn va chạm + vệt cháy trên ô + hất văng */
+    spawnImpactLight(vicPos); spawnScorch(vicUd.root.position);
+    knockVictim(atkUd,vicUd,(type==='r'||type==='k')?.22:.15);
+    var vicTeamCol=vicUd.piece.c==='w'?0xff6b5e:0x9fb4cc;
+    if(type==='p'){ spawnSlash(vicPos,0xffe9a8,atkUd.root.rotation.y); spawnParticles(vicPos,0xffcf6e,22,1.9,.55,.09); spawnParticles(vicPos,vicTeamCol,8,1.1,.5,.08);
+      projectile(atkPos.clone(),vicPos.clone(),.16,makeCrescentObj,null); }
+    else if(type==='k'){ spawnSlash(vicPos,0xffd700,atkUd.root.rotation.y); spawnParticles(vicPos,0xffd700,38,2.5,.75,.11); spawnParticles(vicPos,vicTeamCol,12,1.4,.6,.09); spawnRing(vicUd.root.position,0xffd700,1.25,.6); spawnFlash(vicPos,0xffec9e,1.45); shakeAmp=Math.max(shakeAmp,.11);
+      setTimeout(function(){ spawnSlash(vicPos,0xfff3b0,atkUd.root.rotation.y+1.2); },110); }
+    else if(type==='q'){ spawnSlash(vicPos,0xffd97a,atkUd.root.rotation.y+.6); spawnParticles(vicPos,0xffe9a8,30,2.2,.65,.10); spawnParticles(vicPos,vicTeamCol,10,1.3,.55,.09); spawnRing(vicUd.root.position,0xffd97a,1.45,.65); spawnFlash(vicPos,0xffe9a8,1.1); shakeAmp=Math.max(shakeAmp,.08);
+      setTimeout(function(){ spawnSlash(vicPos,0xffe9a8,atkUd.root.rotation.y+2.2); },120); }
+    else if(type==='r'){ spawnRing(vicUd.root.position,0xffb35c,1.4,.6); spawnParticles(vicPos,0xd8c3a5,28,2.0,.6,.10); spawnParticles(vicPos,0x9a7b52,16,1.1,.7,.14); spawnFlash(vicPos,0xffe9a8,1.0); shakeAmp=Math.max(shakeAmp,.14);
+      setTimeout(function(){ spawnRing(vicUd.root.position,0xffcf8a,1.0,.5); },120); }
+    else if(type==='n'){ spawnParticles(vicPos,0xffcf6e,28,2.1,.6,.09); spawnParticles(vicPos,0x9a7b52,12,1.2,.6,.12); spawnSlash(vicPos,0xffe9a8,atkUd.root.rotation.y); spawnFlash(vicPos,0xffe9a8,.8); shakeAmp=Math.max(shakeAmp,.06); }
     deathSound(); vicUd.deathT=0;
     await sleep(Math.max(0,dur-hitAt)+380);
   }
@@ -1278,7 +1334,7 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('dblclick',function(){
   camAzT=(document.getElementById('selMode').value==='2p'&&turn==='b')?nearestAz(camAzT,Math.PI):nearestAz(camAzT,0);
-  camElT=FLAT_EL; userZoom=1; camDistT=fitDist;
+  camElT=viewEl; userZoom=1; camDistT=fitDist;
 });
 canvas.addEventListener('wheel',function(e){ e.preventDefault(); userZoom=Math.max(.55,Math.min(1.8,userZoom+e.deltaY*.0012)); camDistT=fitDist*userZoom; },{passive:false});
 /* ============ VÒNG LẶP CHÍNH ============ */
@@ -1324,7 +1380,11 @@ document.getElementById('btnNew').addEventListener('click',function(){ ensureAud
 document.getElementById('btnAgain').addEventListener('click',function(){ ensureAudio(); newGame(); });
 document.getElementById('btnUndo').addEventListener('click',function(){ ensureAudio(); undoPly(); });
 document.getElementById('btnFlip').addEventListener('click',function(){ camAzT=nearestAz(camAzT,camAzT+Math.PI); });
-/* Đã bỏ nút Góc: chỉ một góc phẳng thẳng từ trên xuống */
+var viewTilt=true;
+document.getElementById('btnView').addEventListener('click',function(){
+  viewTilt=!viewTilt; viewEl=viewTilt?TILT_EL:FLAT_EL; camElT=viewEl;
+  this.textContent=viewTilt?'◐ Nghiêng':'◐ Phẳng'; this.classList.toggle('on',viewTilt);
+});
 document.getElementById('btnSound').addEventListener('click',function(){
   soundOn=!soundOn; this.textContent=soundOn?'🔊':'🔇'; this.classList.toggle('on',soundOn);
   if(soundOn)ensureAudio();
