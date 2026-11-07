@@ -98,7 +98,6 @@ select{
     <button class="ibtn" id="btnNew">↻ Mới</button>
     <button class="ibtn" id="btnUndo">↩ Hoàn</button>
     <button class="ibtn" id="btnFlip" style="display:none">⇅ Lật</button>
-    <button class="ibtn on" id="btnView">◐ Ngồi</button>
     <button class="ibtn on" id="btnSound">🔊</button>
     <div id="turnTag">🔴 Lê Dương Đỏ</div>
   </div>
@@ -136,7 +135,7 @@ select{
     <h2>CỬ ĐỘNG NGƯỜI THẬT</h2>
     <p style="margin:0">Mọi quân đều là <b>người 3D có khớp thật</b> — vai, khuỷu tay, hông, đầu gối. Khi đi, hai chân bước xen kẽ, đầu gối gập lúc nhấc chân, tay vung ngược chân, thân nhún theo nhịp bước và hơi nghiêng về trước; đi xa thì <b>chạy</b>. Đứng yên vẫn <b>thở</b>, đầu ngó quanh canh địch. Mã phi bằng <b>4 chân ngựa phi</b> xen kẽ và nhảy vọt qua đầu quân khác đúng luật Mã. Khi bị ăn, quân <b>loạng choạng rồi ngã ngửa</b> đúng hướng đòn đánh.</p>
     <h2>CÁCH CHƠI</h2>
-    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. <b>Kéo 1 ngón</b> trên bàn = xoay camera, <b>chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về góc ngồi mặc định. Nút <b>Góc</b> đổi Ngồi (~48°, thấy rõ người và mặt quân) / Trên (gần thẳng đứng). Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
+    <p style="margin:0">Chạm vào quân của mình để xem các ô đi được (chấm xanh = ô trống, vòng đỏ = ô ăn được), chạm ô đích để đi. Đủ luật cờ vua: nhập thành, bắt tốt qua đường, phong cấp (hỏi chọn quân), chiếu / chiếu hết / hết nước. Bàn cờ <b>phẳng, nhìn thẳng từ trên xuống</b> — ô nào ra ô đó, bấm là trúng. <b>Chụm 2 ngón</b> = phóng to/thu nhỏ, <b>chạm đúp</b> = về cỡ mặc định. Chế độ 2 người có nút <b>Lật</b> và bàn tự xoay sang phía người sắp đi. Nút <b>Hoàn</b> lui lại một nước (đấu với máy lui 2 nước).</p>
     <h2>LỊCH SỬ NƯỚC ĐI</h2>
     <div id="movesBox" style="font-size:12.5px">Chưa có nước đi nào.</div>
   </div>
@@ -406,11 +405,12 @@ var renderer,scene,camera,raycaster=new THREE.Raycaster(),pointerV=new THREE.Vec
 var squareMeshes=[],pieceObjs=[],objGrid=[],effects=[],tweens=[];
 var glowTex=null,glyphTexCache={},shieldTexCache={};
 var BASE_DIST=15, fitDist=BASE_DIST, userZoom=1;
-var camAz=0,camAzT=0,camEl=48*Math.PI/180,camElT=48*Math.PI/180,camDist=BASE_DIST,camDistT=BASE_DIST;
+var FLAT_EL=89*Math.PI/180; /* góc phẳng thẳng từ trên xuống (Cường chốt: bàn phẳng, không nghiêng) */
+var camAz=0,camAzT=0,camEl=FLAT_EL,camElT=FLAT_EL,camDist=BASE_DIST,camDistT=BASE_DIST;
 var BOARD_PTS=[[-4.85,-4.85],[4.85,-4.85],[-4.85,4.85],[4.85,4.85],[-4.85,0],[4.85,0],[0,-4.85],[0,4.85]];
 /* Khung hình tự vừa: đo THẬT các góc bàn chiếu lên màn hình, tăng dần khoảng cách tới khi lọt hết (kể cả màn dọc) */
 function measureBoard(){
-  var el=.84, horiz=fitDist*Math.cos(el);
+  var el=camElT, horiz=fitDist*Math.cos(el);
   var sp=camera.position.clone(), sq=camera.quaternion.clone();
   camera.position.set(0,fitDist*Math.sin(el),horiz); camera.lookAt(0,.25,0); camera.updateMatrixWorld();
   var mx=0,my=0;
@@ -1265,7 +1265,7 @@ canvas.addEventListener('pointermove',function(e){
   }
   var dx=e.clientX-prev.x, dy=e.clientY-prev.y;
   if(downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>9)dragMoved=true;
-  if(dragMoved){ camAzT-=dx*.0055; camElT=Math.max(.30,Math.min(1.42,camElT+dy*.004)); }
+  /* Bàn phẳng cố định: kéo chỉ để phân biệt với chạm chọn quân, không xoay/nghiêng camera nữa */
 });
 function endPointer(e){
   delete pointers[e.pointerId];
@@ -1278,7 +1278,7 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('dblclick',function(){
   camAzT=(document.getElementById('selMode').value==='2p'&&turn==='b')?nearestAz(camAzT,Math.PI):nearestAz(camAzT,0);
-  camElT=.84; userZoom=1; camDistT=fitDist;
+  camElT=FLAT_EL; userZoom=1; camDistT=fitDist;
 });
 canvas.addEventListener('wheel',function(e){ e.preventDefault(); userZoom=Math.max(.55,Math.min(1.8,userZoom+e.deltaY*.0012)); camDistT=fitDist*userZoom; },{passive:false});
 /* ============ VÒNG LẶP CHÍNH ============ */
@@ -1324,11 +1324,7 @@ document.getElementById('btnNew').addEventListener('click',function(){ ensureAud
 document.getElementById('btnAgain').addEventListener('click',function(){ ensureAudio(); newGame(); });
 document.getElementById('btnUndo').addEventListener('click',function(){ ensureAudio(); undoPly(); });
 document.getElementById('btnFlip').addEventListener('click',function(){ camAzT=nearestAz(camAzT,camAzT+Math.PI); });
-var viewTop=false;
-document.getElementById('btnView').addEventListener('click',function(){
-  viewTop=!viewTop; camElT=viewTop?1.38:.84;
-  this.textContent=viewTop?'◐ Trên':'◐ Ngồi'; this.classList.toggle('on',!viewTop);
-});
+/* Đã bỏ nút Góc: chỉ một góc phẳng thẳng từ trên xuống */
 document.getElementById('btnSound').addEventListener('click',function(){
   soundOn=!soundOn; this.textContent=soundOn?'🔊':'🔇'; this.classList.toggle('on',soundOn);
   if(soundOn)ensureAudio();
