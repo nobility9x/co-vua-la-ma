@@ -405,7 +405,16 @@ var canvas=document.getElementById('gl');
 var renderer,scene,camera,raycaster=new THREE.Raycaster(),pointerV=new THREE.Vector2();
 var squareMeshes=[],pieceObjs=[],objGrid=[],effects=[],tweens=[];
 var glowTex=null,glyphTexCache={},shieldTexCache={};
-var camAz=0,camAzT=0,camEl=48*Math.PI/180,camElT=48*Math.PI/180,camDist=11.6,camDistT=11.6;
+var BASE_DIST=15;
+var camAz=0,camAzT=0,camEl=48*Math.PI/180,camElT=48*Math.PI/180,camDist=BASE_DIST,camDistT=BASE_DIST;
+/* Khung hình tự vừa: tính FOV theo tỉ lệ màn để cả bàn 9,5 ô luôn lọt khung, kể cả màn dọc điện thoại */
+function fitCamera(){
+  if(!camera)return;
+  var a=camera.aspect||1;
+  var need=Math.max(7.8/2/BASE_DIST,(10.1/2)/(BASE_DIST*a),Math.tan(20*Math.PI/180));
+  need=Math.min(need,Math.tan(37*Math.PI/180));
+  camera.fov=2*Math.atan(need)*180/Math.PI; camera.updateProjectionMatrix();
+}
 var shakeAmp=0, busy=false, selected=null, legalCache=[], lastMoveSq=null;
 var stageEl=document.getElementById('stage'), bannerEl=document.getElementById('banner'), statusEl=document.getElementById('status');
 function sqPos(x,y){return{x:x-3.5,z:y-3.5};}
@@ -451,7 +460,7 @@ function initScene(){
   scene.add(new THREE.AmbientLight(0xffe6c4,.75));
   var hemi=new THREE.HemisphereLight(0xffe9c9,0x40260f,.5); scene.add(hemi);
   var key=new THREE.DirectionalLight(0xfff0d0,1.6); key.position.set(6,12,5); key.castShadow=true;
-  key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0004;
+  key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0008; key.shadow.normalBias=.03;
   scene.add(key);
   var rim=new THREE.DirectionalLight(0xff9a5c,.55); rim.position.set(-7,5,-8); scene.add(rim);
   /* sàn đấu trường */
@@ -1231,7 +1240,7 @@ canvas.addEventListener('pointermove',function(e){
   var prev=pointers[e.pointerId]; pointers[e.pointerId]={x:e.clientX,y:e.clientY};
   if(Object.keys(pointers).length===2){
     var ps=Object.values(pointers), d=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
-    if(pinchD0>0){ camDistT=Math.max(7.5,Math.min(17,camDistT*pinchD0/Math.max(d,1))); }
+    if(pinchD0>0){ camDistT=Math.max(9,Math.min(26,camDistT*pinchD0/Math.max(d,1))); }
     pinchD0=d; dragMoved=true; return;
   }
   var dx=e.clientX-prev.x, dy=e.clientY-prev.y;
@@ -1249,9 +1258,9 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('dblclick',function(){
   camAzT=(document.getElementById('selMode').value==='2p'&&turn==='b')?nearestAz(camAzT,Math.PI):nearestAz(camAzT,0);
-  camElT=.84; camDistT=11.6;
+  camElT=.84; camDistT=BASE_DIST;
 });
-canvas.addEventListener('wheel',function(e){ e.preventDefault(); camDistT=Math.max(7.5,Math.min(17,camDistT+e.deltaY*.01)); },{passive:false});
+canvas.addEventListener('wheel',function(e){ e.preventDefault(); camDistT=Math.max(9,Math.min(26,camDistT+e.deltaY*.01)); },{passive:false});
 /* ============ VÒNG LẶP CHÍNH ============ */
 var lastNow=performance.now();
 function loop(now){
@@ -1278,7 +1287,7 @@ function resize(){
   var w=stageEl.clientWidth||window.innerWidth, h=stageEl.clientHeight||window.innerHeight;
   if(!w||!h)return;
   renderer.setSize(w,h,false);
-  camera.aspect=w/h; camera.updateProjectionMatrix();
+  camera.aspect=w/h; fitCamera();
 }
 window.addEventListener('resize',resize);
 /* ============ UI ============ */
@@ -1336,7 +1345,14 @@ window.__romanDebug={
     list.forEach(function(e){ board[e[3]][e[2]]={t:e[0],c:e[1]}; });
     castling={wk:false,wq:false,bk:false,bq:false}; ep=null; halfmove=0; gameOver=false; moveSans=[]; capturedBy={w:[],b:[]}; undoStack=[];
     turn=turnC||'w'; selected=null; legalCache=[]; lastMoveSq=null; rebuildPieces(); updateTurnUI(); },
-  at:function(x,y){ var p=board[y][x]; return p?(p.t+p.c):null; }
+  at:function(x,y){ var p=board[y][x]; return p?(p.t+p.c):null; },
+  corners:function(aspect){ var oldA=camera.aspect; camera.aspect=aspect; fitCamera(); var usedFov=camera.fov;
+    var el=.84, d=BASE_DIST, horiz=d*Math.cos(el);
+    camera.position.set(0,d*Math.sin(el),horiz); camera.lookAt(0,.25,0); camera.updateMatrixWorld();
+    var mx=0,my=0; [[-4.75,-4.75],[4.75,-4.75],[-4.75,4.75],[4.75,4.75],[-4.75,0],[4.75,0],[0,-4.75],[0,4.75]].forEach(function(c){
+      var v=new THREE.Vector3(c[0],0,c[1]).project(camera); mx=Math.max(mx,Math.abs(v.x)); my=Math.max(my,Math.abs(v.y)); });
+    camera.aspect=oldA; fitCamera(); return {maxX:+mx.toFixed(3),maxY:+my.toFixed(3),fov:+usedFov.toFixed(1)};
+  }
 };
 requestAnimationFrame(function(n){ lastNow=n; requestAnimationFrame(loop); });
 setTimeout(resize,60); setTimeout(resize,400);
@@ -1351,34 +1367,27 @@ window.addEventListener('load',function(){
   (async function(){
     try{
       var D=window.__romanDebug; if(!D){log('NO_DEBUG'); return;}
+      var cp=D.corners(390/730); log('CORNERS_DUNG maxX='+cp.maxX+' maxY='+cp.maxY+' fov='+cp.fov);
+      var cn=D.corners(1.9); log('CORNERS_NGANG maxX='+cn.maxX+' maxY='+cn.maxY+' fov='+cn.fov);
       document.getElementById('selMode').value='2p';
       document.getElementById('selMode').dispatchEvent(new Event('change'));
       var st=await waitIdle(); log('INIT pieces='+st.pieces+' board='+st.boardPieces+' err=['+st.err+']');
-      // 1) tot di 2 o + an cheo (don Gladius)
-      log('e2e4='+D.move(4,6,4,4)); st=await waitIdle(); log('sau e4 turn='+st.turn);
+      log('e2e4='+D.move(4,6,4,4)); st=await waitIdle();
       log('d7d5='+D.move(3,1,3,3)); st=await waitIdle();
-      log('exd5='+D.move(4,4,3,3)); st=await waitIdle(); log('AN_TOT ok at d5='+D.at(3,3)+' pieces='+st.pieces+' cap='+st.sans.join(','));
-      // 2) ma nhay + tuong di
+      log('exd5='+D.move(4,4,3,3)); st=await waitIdle(); log('AN_TOT at d5='+D.at(3,3)+' pieces='+st.pieces);
       log('g8f6='+D.move(6,0,5,2)); st=await waitIdle();
-      log('f1b5='+D.move(5,7,2,4)); st=await waitIdle(); log('tuong toi b5='+D.at(2,4));
+      log('f1b5='+D.move(5,7,1,3)); st=await waitIdle(); log('tuong tai b5='+D.at(1,3));
       log('b8c6='+D.move(1,0,2,2)); st=await waitIdle();
-      log('Bxc6='+D.move(2,4,2,2)); st=await waitIdle(); log('AN_TUONG(ban ten) at c6='+D.at(2,2)+' pieces='+st.pieces);
-      // 3) Xe an (huc khien) - vi tri tuy chinh
+      log('Bxc6='+D.move(1,3,2,2)); st=await waitIdle(); log('AN_TUONG at c6='+D.at(2,2)+' pieces='+st.pieces);
       D.setBoard([['k','w',4,7],['r','w',0,7],['k','b',4,0],['p','b',0,3]],'w'); st=await waitIdle();
       log('Rxa5='+D.move(0,7,0,3)); st=await waitIdle(); log('AN_XE at a5='+D.at(0,3)+' pieces='+st.pieces);
-      // 4) Hau an (xoay thuong)
       D.setBoard([['k','w',4,7],['q','w',3,7],['k','b',4,0],['p','b',3,3]],'w'); st=await waitIdle();
       log('Qxd5='+D.move(3,7,3,3)); st=await waitIdle(); log('AN_HAU at d5='+D.at(3,3)+' pieces='+st.pieces);
-      // 5) Vua an (hoang de tram)
       D.setBoard([['k','w',4,4],['k','b',4,0],['p','b',3,3]],'w'); st=await waitIdle();
       log('Kxd5='+D.move(4,4,3,3)); st=await waitIdle(); log('AN_VUA at d5='+D.at(3,3)+' pieces='+st.pieces);
-      // 6) Ma an (phi ma dam thuong)
       D.setBoard([['k','w',4,7],['n','w',5,5],['k','b',4,0],['p','b',4,3]],'w'); st=await waitIdle();
       log('Nxe5='+D.move(5,5,4,3)); st=await waitIdle(); log('AN_MA at e5='+D.at(4,3)+' pieces='+st.pieces);
-      // 7) nhap thanh + phong cap + chieu het co ban
-      D.setBoard([['k','w',4,7],['r','w',7,7],['k','b',4,0],['p','w',0,1]],'w');
-      // mo quyen nhap thanh tay cho test nay
-      st=await waitIdle(); log('SET_OK pieces='+st.pieces);
+      D.setBoard([['k','w',4,7],['r','w',7,7],['k','b',4,0],['p','w',0,1]],'w'); st=await waitIdle();
       log('a7a8promo='+D.move(0,1,0,0)); st=await waitIdle(); log('PHONGCAP at a8='+D.at(0,0));
       log('DONE err=['+ (window.__romanDebug.state().err||'') +']');
     }catch(e){ log('EXC '+e.message); }

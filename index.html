@@ -405,7 +405,16 @@ var canvas=document.getElementById('gl');
 var renderer,scene,camera,raycaster=new THREE.Raycaster(),pointerV=new THREE.Vector2();
 var squareMeshes=[],pieceObjs=[],objGrid=[],effects=[],tweens=[];
 var glowTex=null,glyphTexCache={},shieldTexCache={};
-var camAz=0,camAzT=0,camEl=48*Math.PI/180,camElT=48*Math.PI/180,camDist=11.6,camDistT=11.6;
+var BASE_DIST=15;
+var camAz=0,camAzT=0,camEl=48*Math.PI/180,camElT=48*Math.PI/180,camDist=BASE_DIST,camDistT=BASE_DIST;
+/* Khung hình tự vừa: tính FOV theo tỉ lệ màn để cả bàn 9,5 ô luôn lọt khung, kể cả màn dọc điện thoại */
+function fitCamera(){
+  if(!camera)return;
+  var a=camera.aspect||1;
+  var need=Math.max(7.8/2/BASE_DIST,(10.1/2)/(BASE_DIST*a),Math.tan(20*Math.PI/180));
+  need=Math.min(need,Math.tan(37*Math.PI/180));
+  camera.fov=2*Math.atan(need)*180/Math.PI; camera.updateProjectionMatrix();
+}
 var shakeAmp=0, busy=false, selected=null, legalCache=[], lastMoveSq=null;
 var stageEl=document.getElementById('stage'), bannerEl=document.getElementById('banner'), statusEl=document.getElementById('status');
 function sqPos(x,y){return{x:x-3.5,z:y-3.5};}
@@ -451,7 +460,7 @@ function initScene(){
   scene.add(new THREE.AmbientLight(0xffe6c4,.75));
   var hemi=new THREE.HemisphereLight(0xffe9c9,0x40260f,.5); scene.add(hemi);
   var key=new THREE.DirectionalLight(0xfff0d0,1.6); key.position.set(6,12,5); key.castShadow=true;
-  key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0004;
+  key.shadow.mapSize.set(2048,2048); key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0008; key.shadow.normalBias=.03;
   scene.add(key);
   var rim=new THREE.DirectionalLight(0xff9a5c,.55); rim.position.set(-7,5,-8); scene.add(rim);
   /* sàn đấu trường */
@@ -1231,7 +1240,7 @@ canvas.addEventListener('pointermove',function(e){
   var prev=pointers[e.pointerId]; pointers[e.pointerId]={x:e.clientX,y:e.clientY};
   if(Object.keys(pointers).length===2){
     var ps=Object.values(pointers), d=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
-    if(pinchD0>0){ camDistT=Math.max(7.5,Math.min(17,camDistT*pinchD0/Math.max(d,1))); }
+    if(pinchD0>0){ camDistT=Math.max(9,Math.min(26,camDistT*pinchD0/Math.max(d,1))); }
     pinchD0=d; dragMoved=true; return;
   }
   var dx=e.clientX-prev.x, dy=e.clientY-prev.y;
@@ -1249,9 +1258,9 @@ canvas.addEventListener('pointerup',endPointer);
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('dblclick',function(){
   camAzT=(document.getElementById('selMode').value==='2p'&&turn==='b')?nearestAz(camAzT,Math.PI):nearestAz(camAzT,0);
-  camElT=.84; camDistT=11.6;
+  camElT=.84; camDistT=BASE_DIST;
 });
-canvas.addEventListener('wheel',function(e){ e.preventDefault(); camDistT=Math.max(7.5,Math.min(17,camDistT+e.deltaY*.01)); },{passive:false});
+canvas.addEventListener('wheel',function(e){ e.preventDefault(); camDistT=Math.max(9,Math.min(26,camDistT+e.deltaY*.01)); },{passive:false});
 /* ============ VÒNG LẶP CHÍNH ============ */
 var lastNow=performance.now();
 function loop(now){
@@ -1278,7 +1287,7 @@ function resize(){
   var w=stageEl.clientWidth||window.innerWidth, h=stageEl.clientHeight||window.innerHeight;
   if(!w||!h)return;
   renderer.setSize(w,h,false);
-  camera.aspect=w/h; camera.updateProjectionMatrix();
+  camera.aspect=w/h; fitCamera();
 }
 window.addEventListener('resize',resize);
 /* ============ UI ============ */
@@ -1336,7 +1345,14 @@ window.__romanDebug={
     list.forEach(function(e){ board[e[3]][e[2]]={t:e[0],c:e[1]}; });
     castling={wk:false,wq:false,bk:false,bq:false}; ep=null; halfmove=0; gameOver=false; moveSans=[]; capturedBy={w:[],b:[]}; undoStack=[];
     turn=turnC||'w'; selected=null; legalCache=[]; lastMoveSq=null; rebuildPieces(); updateTurnUI(); },
-  at:function(x,y){ var p=board[y][x]; return p?(p.t+p.c):null; }
+  at:function(x,y){ var p=board[y][x]; return p?(p.t+p.c):null; },
+  corners:function(aspect){ var oldA=camera.aspect; camera.aspect=aspect; fitCamera(); var usedFov=camera.fov;
+    var el=.84, d=BASE_DIST, horiz=d*Math.cos(el);
+    camera.position.set(0,d*Math.sin(el),horiz); camera.lookAt(0,.25,0); camera.updateMatrixWorld();
+    var mx=0,my=0; [[-4.75,-4.75],[4.75,-4.75],[-4.75,4.75],[4.75,4.75],[-4.75,0],[4.75,0],[0,-4.75],[0,4.75]].forEach(function(c){
+      var v=new THREE.Vector3(c[0],0,c[1]).project(camera); mx=Math.max(mx,Math.abs(v.x)); my=Math.max(my,Math.abs(v.y)); });
+    camera.aspect=oldA; fitCamera(); return {maxX:+mx.toFixed(3),maxY:+my.toFixed(3),fov:+usedFov.toFixed(1)};
+  }
 };
 requestAnimationFrame(function(n){ lastNow=n; requestAnimationFrame(loop); });
 setTimeout(resize,60); setTimeout(resize,400);
