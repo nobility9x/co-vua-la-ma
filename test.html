@@ -1353,7 +1353,8 @@ setStatus('🔴 Lê Dương Đỏ đi trước — chạm quân để xem nướ
 /* Móc kiểm chứng tự động (chỉ đọc/chạy nước đi qua đúng luật, không đổi giao diện) */
 window.__romanDebug={
   state:function(){ var n=0; for(var y=0;y<8;y++)for(var x=0;x<8;x++)if(board[y][x])n++;
-    return {pieces:pieceObjs.length, boardPieces:n, turn:turn, busy:busy, over:gameOver, sans:moveSans.slice(), err:errBox.textContent}; },
+    return {pieces:pieceObjs.length, boardPieces:n, turn:turn, busy:busy, over:gameOver, sans:moveSans.slice(), err:errBox.textContent,
+      camAz:+camAz.toFixed(3), camEl:+camEl.toFixed(3), camDist:+camDist.toFixed(1)}; },
   legal:function(x,y){ return legalMoves(board,x,y,ep,castling).map(function(m){return [m.tx,m.ty];}); },
   move:function(fx,fy,tx,ty){ var ms=legalMoves(board,fx,fy,ep,castling).filter(function(m){return m.tx===tx&&m.ty===ty;});
     if(!ms.length)return false; if(ms[0].flags.promo)ms[0].promoType='q'; doMove(ms[0]); return true; },
@@ -1384,7 +1385,7 @@ window.addEventListener('load',function(){
       var cn=D.corners(1.9); log('CORNERS_NGANG maxX='+cn.maxX+' maxY='+cn.maxY+' fov='+cn.fov+' dist='+cn.dist);
       document.getElementById('selMode').value='2p';
       document.getElementById('selMode').dispatchEvent(new Event('change'));
-      var st=await waitIdle(); log('INIT pieces='+st.pieces+' board='+st.boardPieces+' err=['+st.err+']');
+      var st=await waitIdle(); log('INIT pieces='+st.pieces+' board='+st.boardPieces+' err=['+st.err+']'); log('CAM_DAU az='+st.camAz+' el='+st.camEl+' dist='+st.camDist);
       log('e2e4='+D.move(4,6,4,4)); st=await waitIdle();
       log('d7d5='+D.move(3,1,3,3)); st=await waitIdle();
       log('exd5='+D.move(4,4,3,3)); st=await waitIdle(); log('AN_TOT at d5='+D.at(3,3)+' pieces='+st.pieces);
@@ -1408,4 +1409,6 @@ window.addEventListener('load',function(){
 });
 </script>
 </body>
+</html>
+
 </html>
